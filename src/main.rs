@@ -1,5 +1,7 @@
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::str::FromStr;
 
 use structopt::StructOpt;
 
@@ -9,6 +11,20 @@ struct Cli {
     input_file: std::path::PathBuf,
     #[structopt(parse(from_os_str), short, long)]
     output_file: Option<std::path::PathBuf>,
+}
+
+fn parse_simple_line<T>(line: String, title: &'static str, expect_len: usize) -> Vec<T>
+where
+    T: FromStr,
+    <T as std::str::FromStr>::Err: Debug,
+{
+    let entries: Vec<T> = line
+        .trim()
+        .split_whitespace()
+        .map(|num| num.parse::<T>().expect(title))
+        .collect();
+    assert!(entries.len() == expect_len);
+    entries
 }
 
 fn main() -> Result<(), std::io::Error> {
@@ -28,45 +44,29 @@ fn main() -> Result<(), std::io::Error> {
     // first line is number of x, y, z voxels
     let (x_num, y_num, z_num) = {
         let voxel_nums = lines_iter.next().expect("voxel numbers");
-        let voxel_nums: Vec<usize> = voxel_nums
-            .trim()
-            .split_whitespace()
-            .map(|num| num.parse::<usize>().expect("voxel number"))
-            .collect();
-        assert!(voxel_nums.len() == 3);
+        let voxel_nums = parse_simple_line::<usize>(voxel_nums, "voxel number", 3);
         (voxel_nums[0], voxel_nums[1], voxel_nums[2])
     };
 
     // second line is x-coordinates
-    let xs: Vec<f64> = {
-        let xs = lines_iter.next().expect("x-coordinates");
-        xs.trim()
-            .split_whitespace()
-            .map(|num| num.parse::<f64>().expect("x-coordinate"))
-            .collect()
-    };
-    // x_num is number of cells, xs is number of cells + 1
-    assert!(xs.len() == x_num + 1);
+    let xs = parse_simple_line::<f64>(
+        lines_iter.next().expect("x-coordinates"),
+        "x-coordinate",
+        x_num + 1,
+    );
 
-    // third line is y-coordinates
-    let ys: Vec<f64> = {
-        let ys = lines_iter.next().expect("y-coordinates");
-        ys.trim()
-            .split_whitespace()
-            .map(|num| num.parse::<f64>().expect("y-coordinate"))
-            .collect()
-    };
-    assert!(ys.len() == y_num + 1);
+    // third is y-coordinates
+    let ys = parse_simple_line::<f64>(
+        lines_iter.next().expect("y-coordinates"),
+        "y-coordinate",
+        y_num + 1,
+    );
 
-    // fourth is z-coordinates
-    let zs: Vec<f64> = {
-        let zs = lines_iter.next().expect("z-coordinates");
-        zs.trim()
-            .split_whitespace()
-            .map(|num| num.parse::<f64>().expect("z-coordinate"))
-            .collect()
-    };
-    assert!(zs.len() == z_num + 1);
+    let zs = parse_simple_line::<f64>(
+        lines_iter.next().expect("z-coordinates"),
+        "z-coordinate",
+        z_num + 1,
+    );
 
     let num_voxels = x_num * y_num * z_num;
     let grid_index = |i, j, k| i + xs.len() * j + xs.len() * ys.len() * k;
@@ -76,26 +76,18 @@ fn main() -> Result<(), std::io::Error> {
     dbg!(grid_index(0, 1, 0));
 
     // fifth is deposited dose
-    let doses: Vec<f64> = {
-        let doses = lines_iter.next().expect("doses");
-        doses
-            .trim()
-            .split_whitespace()
-            .map(|num| num.parse::<f64>().expect("dose value"))
-            .collect()
-    };
-    assert!(doses.len() == num_voxels);
+    let doses = parse_simple_line::<f64>(
+        lines_iter.next().expect("doses"),
+        "dose value",
+        num_voxels
+    );
 
-    // sixth is uncertainties
-    let uncerts: Vec<f64> = {
-        let uncerts = lines_iter.next().expect("uncerts");
-        uncerts
-            .trim()
-            .split_whitespace()
-            .map(|num| num.parse::<f64>().expect("uncertainty value"))
-            .collect()
-    };
-    assert!(uncerts.len() == doses.len());
+    // sixth is uncertainty values
+    let uncerts = parse_simple_line::<f64>(
+        lines_iter.next().expect("uncerts"),
+        "uncertainty value",
+        num_voxels,
+    );
 
     // output
     let mut filestream = BufWriter::new(File::create(output).unwrap());
@@ -103,7 +95,11 @@ fn main() -> Result<(), std::io::Error> {
     // gmsh header
     writeln!(&mut filestream, "$MeshFormat\n2.2 0 8\n$EndMeshFormat")?;
     // nodes
-    write!(&mut filestream, "$Nodes\n{}\n", xs.len() * ys.len() * zs.len())?;
+    write!(
+        &mut filestream,
+        "$Nodes\n{}\n",
+        xs.len() * ys.len() * zs.len()
+    )?;
     for (k, z) in zs.iter().enumerate() {
         for (j, y) in ys.iter().enumerate() {
             for (i, x) in xs.iter().enumerate() {
@@ -111,7 +107,11 @@ fn main() -> Result<(), std::io::Error> {
                 writeln!(
                     &mut filestream,
                     "{} {} {} {}",
-                    grid_index(i, j, k) + 1, x, y, z)?;
+                    grid_index(i, j, k) + 1,
+                    x,
+                    y,
+                    z
+                )?;
             }
         }
     }
@@ -122,32 +122,51 @@ fn main() -> Result<(), std::io::Error> {
     //                        ));
 
     writeln!(&mut filestream, "$Elements\n{}", num_voxels)?;
-        for index in 0..num_voxels {
-            // 5 is a gmsh magic number for a hexahedron
-            // 2 0 0 doesn't matter for us -- see gmsh doc for more
-            // x_index =
-            // x_coords = i
-            let x_index = index + 1;
-            let y_index = index + 1 + xs.len();
-            let z_index = index + 1 + xs.len() * ys.len();
-            writeln!(
-                &mut filestream,
-                "{} 5 2 0 0 {} {} {} {} {} {} {} {}",
-                index + 1,
-                x_index + 1,
-                x_index,
-                y_index,
-                y_index + 1,
-                z_index + 1,
-                z_index,
-                z_index + xs.len(),
-                z_index + xs.len() + 1,
-            )
-            .unwrap();
+    for index in 0..num_voxels {
+        // 5 is a gmsh magic number for a hexahedron
+        // 2 0 0 doesn't matter for us -- see gmsh doc for more
+        // x_index =
+        // x_coords = i
+        let x_index = index + 1;
+        let y_index = index + 1 + xs.len();
+        let z_index = index + 1 + xs.len() * ys.len();
+
+        writeln!(
+            &mut filestream,
+            "{} 5 2 0 0 {} {} {} {} {} {} {} {}",
+            index + 1,
+            grid_index(x_index, y_index, z_index),
+            x_index + 1,
+            y_index + 1,
+            y_index,
+            z_index,
+            z_index + 1,
+            z_index + xs.len() + 1,
+            z_index + xs.len(),
+        )
+        .unwrap();
+    }
+    writeln!(&mut filestream, "$EndElements").unwrap();
+
+    let mut write_elt_data = |name: &str, data: Vec<f64>| {
+        writeln!(&mut filestream, "$ElementData").unwrap();
+        // one string - the field name
+        writeln!(&mut filestream, "1\n{}", name).unwrap();
+        // one real value - the time
+        writeln!(&mut filestream, "1\n0.0").unwrap();
+        // three int tags
+        //   timestep 0
+        //   1-component (scalar) field
+        //   num_elt values
+        writeln!(&mut filestream, "3\n0\n1\n{}", data.len()).unwrap();
+        for (index, val) in data.iter().enumerate() {
+            writeln!(&mut filestream, "{} {}", index + 1, val).unwrap();
         }
-        writeln!(&mut filestream, "$EndElements").unwrap();
+        writeln!(&mut filestream, "$EndElementData").unwrap();
+    };
 
-
+    write_elt_data(r#""Dose""#, doses);
+    write_elt_data(r#""Uncertainty""#, uncerts);
 
     println!("{:?}", num_voxels);
     println!("{:?}", xs[0]);
