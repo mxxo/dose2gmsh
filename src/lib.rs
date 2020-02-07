@@ -30,63 +30,64 @@ pub struct DoseBlock {
 //     Gmsh2,
 // }
 
-pub fn parse_3ddose(input_file: &std::path::PathBuf) -> Result<DoseBlock, std::io::Error> {
-    let dose_input = BufReader::new(File::open(input_file)?);
-
-    let mut lines = dose_input.lines().map(|l| l.unwrap());
-    // first line is number of x, y, z voxels
-    let (num_x, num_y, num_z) = {
-        let voxel_nums = lines.next().expect("voxel numbers");
-        let voxel_nums = parse_simple_line::<usize>(voxel_nums, "voxel number", 3);
-        (voxel_nums[0], voxel_nums[1], voxel_nums[2])
-    };
-
-    // second line is x-coordinates
-    let xs = parse_simple_line::<f64>(
-        lines.next().expect("x-coordinates"),
-        "x-coordinate",
-        num_x + 1,
-    );
-
-    // third is y-coordinates
-    let ys = parse_simple_line::<f64>(
-        lines.next().expect("y-coordinates"),
-        "y-coordinate",
-        num_y + 1,
-    );
-
-    // fourth is z-coordinates
-    let zs = parse_simple_line::<f64>(
-        lines.next().expect("z-coordinates"),
-        "z-coordinate",
-        num_z + 1,
-    );
-
-    let num_voxels = num_x * num_y * num_z;
-
-    // fifth is deposited dose
-    let doses = parse_simple_line::<f64>(lines.next().expect("doses"), "dose value", num_voxels);
-
-    // sixth is uncertainty values
-    let uncerts = parse_simple_line::<f64>(
-        lines.next().expect("uncerts"),
-        "uncertainty value",
-        num_voxels,
-    );
-
-    Ok(DoseBlock {
-        num_x,
-        num_y,
-        num_z,
-        xs,
-        ys,
-        zs,
-        doses,
-        uncerts,
-    })
-}
-
 impl DoseBlock {
+    pub fn from_3d_dose(input_file: &std::path::PathBuf) -> Result<DoseBlock, std::io::Error> {
+        let dose_input = BufReader::new(File::open(input_file)?);
+
+        let mut lines = dose_input.lines().map(|l| l.unwrap());
+        // first line is number of x, y, z voxels
+        let (num_x, num_y, num_z) = {
+            let voxel_nums = lines.next().expect("voxel numbers");
+            let voxel_nums = parse_simple_line::<usize>(voxel_nums, "voxel number", 3);
+            (voxel_nums[0], voxel_nums[1], voxel_nums[2])
+        };
+
+        // second line is x-coordinates
+        let xs = parse_simple_line::<f64>(
+            lines.next().expect("x-coordinates"),
+            "x-coordinate",
+            num_x + 1,
+        );
+
+        // third is y-coordinates
+        let ys = parse_simple_line::<f64>(
+            lines.next().expect("y-coordinates"),
+            "y-coordinate",
+            num_y + 1,
+        );
+
+        // fourth is z-coordinates
+        let zs = parse_simple_line::<f64>(
+            lines.next().expect("z-coordinates"),
+            "z-coordinate",
+            num_z + 1,
+        );
+
+        let num_voxels = num_x * num_y * num_z;
+
+        // fifth is deposited dose
+        let doses = parse_simple_line::<f64>(lines.next().expect("doses"), "dose value", num_voxels);
+
+        // sixth is uncertainty values
+        let uncerts = parse_simple_line::<f64>(
+            lines.next().expect("uncerts"),
+            "uncertainty value",
+            num_voxels,
+        );
+
+        Ok(DoseBlock {
+            num_x,
+            num_y,
+            num_z,
+            xs,
+            ys,
+            zs,
+            doses,
+            uncerts,
+        })
+
+    }
+
     pub fn num_voxels(&self) -> usize {
         self.num_x * self.num_y * self.num_z
     }

@@ -1,10 +1,10 @@
-use dose2gmsh::{parse_3ddose, Cli};
+use dose2gmsh::{Cli, DoseBlock};
 use structopt::StructOpt;
 
 fn main() -> Result<(), std::io::Error> {
     let args = Cli::from_args();
 
-    let dose_data = parse_3ddose(&args.input_file)?;
+    let data = DoseBlock::from_3d_dose(&args.input_file)?;
 
     let output = if let Some(output_file) = args.output_file {
         output_file
@@ -14,5 +14,5 @@ fn main() -> Result<(), std::io::Error> {
         output_file
     };
 
-    dose_data.write_gmsh(&output)
+    data.write_gmsh(&output)
 }
