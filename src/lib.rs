@@ -5,23 +5,30 @@ use std::str::FromStr;
 
 use structopt::StructOpt;
 
+/// Command line input parameters.
 #[derive(StructOpt, Debug)]
+#[structopt(name = "dose2gmsh", author = "Max Orok <morok028@uottawa.ca>", about = "Convert dosxyznrc 3ddose files to Gmsh msh files")]
 pub struct Cli {
+    /// The input 3ddose file
     #[structopt(parse(from_os_str), short, long)]
     pub input_file: std::path::PathBuf,
+    /// The output file name, defaults to <input_file>.msh
     #[structopt(parse(from_os_str), short, long)]
     pub output_file: Option<std::path::PathBuf>,
 }
 
+/// Dose and uncertainty data for a 3D rectilinear hexahedral mesh.
 #[derive(Debug, Clone)]
 pub struct DoseBlock {
-    pub num_x: usize,
-    pub num_y: usize,
-    pub num_z: usize,
+    /// Node coordinates along *x* in `cm`.
     pub xs: Vec<f64>,
+    /// Node coordinates along *y* in `cm`.
     pub ys: Vec<f64>,
+    /// Node coordinates along *z* in `cm`.
     pub zs: Vec<f64>,
+    /// Unnormalized voxel dose data.
     pub doses: Vec<f64>,
+    /// Fractional dose uncertainties.
     pub uncerts: Vec<f64>,
 }
 
@@ -31,6 +38,7 @@ pub struct DoseBlock {
 // }
 
 impl DoseBlock {
+    /// Create a new `DoseBlock` by parsing a `3ddose` data file.
     pub fn from_3d_dose(input_file: &std::path::PathBuf) -> Result<DoseBlock, std::io::Error> {
         let dose_input = BufReader::new(File::open(input_file)?);
 
@@ -76,9 +84,6 @@ impl DoseBlock {
         );
 
         Ok(DoseBlock {
-            num_x,
-            num_y,
-            num_z,
             xs,
             ys,
             zs,
@@ -88,18 +93,37 @@ impl DoseBlock {
 
     }
 
-    pub fn num_voxels(&self) -> usize {
-        self.num_x * self.num_y * self.num_z
+    /// Number of voxels in the *x*-direction.
+    pub fn num_x(&self) -> usize {
+        self.xs.len() - 1
     }
 
+    /// Number of voxels in the *y*-direction.
+    pub fn num_y(&self) -> usize {
+        self.ys.len() - 1
+    }
+
+    /// Number of voxels in the *z*-direction.
+    pub fn num_z(&self) -> usize {
+        self.zs.len() - 1
+    }
+
+    /// Total number of mesh voxels.
+    pub fn num_voxels(&self) -> usize {
+        self.num_x() * self.num_y() * self.num_z()
+    }
+
+    /// Total number of mesh nodes.
     pub fn num_nodes(&self) -> usize {
         self.xs.len() * self.ys.len() * self.zs.len()
     }
 
+    /// `[i, j, k]` node list indexing.
     pub fn grid_index(&self, i: usize, j: usize, k: usize) -> usize {
         i + self.xs.len() * j + self.xs.len() * self.ys.len() * k
     }
 
+    /// Convert the `3ddose` data to a Gmsh `.msh` file (version 2.2).
     pub fn write_gmsh(&self, output: &std::path::PathBuf) -> Result<(), std::io::Error> {
         use itertools::Itertools;
 
@@ -150,12 +174,12 @@ impl DoseBlock {
             //
 
             // skip rightmost node to start a new row
-            if index != 0 && index % self.num_x == 0 {
+            if index != 0 && index % self.num_x() == 0 {
                 x_nodes = x_nodes.dropping(1);
             }
 
             // skip top row of nodes to move to the next x-y block
-            if index != 0 && index % (self.num_x * self.num_y) == 0 {
+            if index != 0 && index % (self.num_x() * self.num_y()) == 0 {
                 x_nodes = x_nodes.dropping(self.xs.len());
             }
 
