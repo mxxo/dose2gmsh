@@ -1,3 +1,7 @@
+//! Convert `3ddose` files to Gmsh `msh` (version 2) files.
+//!
+//! Get started with `cargo install dose2gmsh`.
+
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -7,7 +11,7 @@ use structopt::StructOpt;
 
 /// Command line input parameters.
 #[derive(StructOpt, Debug)]
-#[structopt(name = "dose2gmsh", author = "Max Orok <morok028@uottawa.ca>", about = "Convert dosxyznrc 3ddose files to Gmsh msh files")]
+#[structopt(name = "dose2gmsh", author = "Max Orok <morok@mevex.com>", about = "Convert dosxyznrc 3ddose files to Gmsh msh files")]
 pub struct Cli {
     /// The input 3ddose file
     #[structopt(parse(from_os_str), short, long)]
@@ -20,13 +24,13 @@ pub struct Cli {
 /// Dose and uncertainty data for a 3D rectilinear hexahedral mesh.
 #[derive(Debug, Clone)]
 pub struct DoseBlock {
-    /// Node coordinates along *x* in `cm`.
+    /// Node coordinates along *x* in `[cm]`.
     pub xs: Vec<f64>,
-    /// Node coordinates along *y* in `cm`.
+    /// Node coordinates along *y* in `[cm]`.
     pub ys: Vec<f64>,
-    /// Node coordinates along *z* in `cm`.
+    /// Node coordinates along *z* in `[cm]`.
     pub zs: Vec<f64>,
-    /// Unnormalized voxel dose data.
+    /// Unnormalized voxel dose per fluence data in `[Gy · cm2]`.
     pub doses: Vec<f64>,
     /// Fractional dose uncertainties.
     pub uncerts: Vec<f64>,
@@ -232,8 +236,8 @@ impl DoseBlock {
             Ok(())
         };
 
-        write_elt_data(r#""Dose""#, &self.doses)?;
-        write_elt_data(r#""Uncertainty""#, &self.uncerts)
+        write_elt_data(r#""Dose [Gy·cm2]""#, &self.doses)?;
+        write_elt_data(r#""Uncertainty fraction""#, &self.uncerts)
     }
 }
 
