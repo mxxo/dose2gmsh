@@ -65,11 +65,7 @@ pub fn parse_3ddose(input_file: &std::path::PathBuf) -> Result<DoseBlock, std::i
     let num_voxels = num_x * num_y * num_z;
 
     // fifth is deposited dose
-    let doses = parse_simple_line::<f64>(
-        lines.next().expect("doses"),
-        "dose value",
-        num_voxels
-    );
+    let doses = parse_simple_line::<f64>(lines.next().expect("doses"), "dose value", num_voxels);
 
     // sixth is uncertainty values
     let uncerts = parse_simple_line::<f64>(
@@ -89,7 +85,6 @@ pub fn parse_3ddose(input_file: &std::path::PathBuf) -> Result<DoseBlock, std::i
         uncerts,
     })
 }
-
 
 impl DoseBlock {
     pub fn num_voxels(&self) -> usize {
@@ -112,11 +107,7 @@ impl DoseBlock {
         // gmsh header
         writeln!(&mut filestream, "$MeshFormat\n2.2 0 8\n$EndMeshFormat")?;
         // nodes
-        write!(
-            &mut filestream,
-            "$Nodes\n{}\n",
-            self.num_nodes(),
-        )?;
+        write!(&mut filestream, "$Nodes\n{}\n", self.num_nodes())?;
         for (k, z) in self.zs.iter().enumerate() {
             for (j, y) in self.ys.iter().enumerate() {
                 for (i, x) in self.xs.iter().enumerate() {
@@ -195,7 +186,6 @@ impl DoseBlock {
                 yzr, // 6
                 yzl, // 7
             )?;
-
         }
         writeln!(&mut filestream, "$EndElements")?;
 
@@ -235,5 +225,3 @@ where
     assert!(entries.len() == expect_len);
     entries
 }
-
-

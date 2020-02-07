@@ -1,8 +1,7 @@
-use dose2gmsh::{Cli, parse_3ddose};
+use dose2gmsh::{parse_3ddose, Cli};
 use structopt::StructOpt;
 
 fn main() -> Result<(), std::io::Error> {
-
     let args = Cli::from_args();
 
     let dose_data = parse_3ddose(&args.input_file)?;
