@@ -28,6 +28,8 @@ where
 }
 
 fn main() -> Result<(), std::io::Error> {
+    use itertools::Itertools;
+
     let args = Cli::from_args();
     let dose_input =
         BufReader::new(File::open(&args.input_file).expect("couldn't open input file"));
@@ -42,7 +44,7 @@ fn main() -> Result<(), std::io::Error> {
 
     let mut lines_iter = dose_input.lines().map(|l| l.unwrap());
     // first line is number of x, y, z voxels
-    let (x_num, y_num, z_num) = {
+    let (num_x, num_y, num_z) = {
         let voxel_nums = lines_iter.next().expect("voxel numbers");
         let voxel_nums = parse_simple_line::<usize>(voxel_nums, "voxel number", 3);
         (voxel_nums[0], voxel_nums[1], voxel_nums[2])
@@ -52,23 +54,23 @@ fn main() -> Result<(), std::io::Error> {
     let xs = parse_simple_line::<f64>(
         lines_iter.next().expect("x-coordinates"),
         "x-coordinate",
-        x_num + 1,
+        num_x + 1,
     );
 
     // third is y-coordinates
     let ys = parse_simple_line::<f64>(
         lines_iter.next().expect("y-coordinates"),
         "y-coordinate",
-        y_num + 1,
+        num_y + 1,
     );
 
     let zs = parse_simple_line::<f64>(
         lines_iter.next().expect("z-coordinates"),
         "z-coordinate",
-        z_num + 1,
+        num_z + 1,
     );
 
-    let num_voxels = x_num * y_num * z_num;
+    let num_voxels = num_x * num_y * num_z;
     let grid_index = |i, j, k| i + xs.len() * j + xs.len() * ys.len() * k;
 
     dbg!(grid_index(0, 0, 1));
@@ -91,6 +93,7 @@ fn main() -> Result<(), std::io::Error> {
 
     // output
     let mut filestream = BufWriter::new(File::create(output).unwrap());
+    let num_nodes = xs.len() * ys.len() * zs.len();
 
     // gmsh header
     writeln!(&mut filestream, "$MeshFormat\n2.2 0 8\n$EndMeshFormat")?;
@@ -98,7 +101,7 @@ fn main() -> Result<(), std::io::Error> {
     write!(
         &mut filestream,
         "$Nodes\n{}\n",
-        xs.len() * ys.len() * zs.len()
+        num_nodes,
     )?;
     for (k, z) in zs.iter().enumerate() {
         for (j, y) in ys.iter().enumerate() {
@@ -116,35 +119,75 @@ fn main() -> Result<(), std::io::Error> {
         }
     }
     writeln!(&mut filestream, "$EndNodes")?;
-    // elts
-    // let indexes = |index| ((
-    //
-    //                        ));
+
+    // todo find exact len
+    let mut x_nodes = 1..=num_nodes;
+    let y_index = |x_index| x_index + xs.len();
+    let z_index = |x_index| x_index + xs.len() * ys.len();
+
+    dbg!(y_index(1));
+    dbg!(z_index(1));
+
+    let num_voxels = num_x * num_y * num_z;
 
     writeln!(&mut filestream, "$Elements\n{}", num_voxels)?;
     for index in 0..num_voxels {
-        // 5 is a gmsh magic number for a hexahedron
-        // 2 0 0 doesn't matter for us -- see gmsh doc for more
-        // x_index =
-        // x_coords = i
-        let x_index = index + 1;
-        let y_index = index + 1 + xs.len();
-        let z_index = index + 1 + xs.len() * ys.len();
+        // we order nodes following the gmsh numbering
+        // source: http://gmsh.info/doc/texinfo/gmsh.html#Low-order-elements
+        //               v
+        //        3----------2
+        //        |\     ^   |\
+        //        | \    |   | \
+        //        |  \   |   |  \
+        //        |   7------+---6
+        //        |   |  +-- |-- | -> u
+        //        0---+---\--1   |
+        //         \  |    \  \  |
+        //          \ |     \  \ |
+        //           \|      w  \|
+        //            4----------5
+        //
+
+        // skip rightmost node to start a new row
+        if index != 0 && index % num_x == 0 {
+            x_nodes = x_nodes.dropping(1);
+        }
+
+        // skip top row of nodes to move to the next x-y block
+        if index != 0 && index % (num_x * num_y) == 0 {
+            x_nodes = x_nodes.dropping(xs.len());
+        }
+
+        let xl = x_nodes.next().unwrap(); // 0 node
+        let xr = xl + 1; // 1
+
+        let yl = y_index(xl); // 3
+        let yr = yl + 1; // 2
+
+        let zl = z_index(xl); // 4
+        let zr = zl + 1; // 5
+
+        let yzl = z_index(yl); // 7
+        let yzr = yzl + 1; // 6
 
         writeln!(
             &mut filestream,
+            // 5 is the gmsh magic number for a hexahedron
+            // 2 0 0 doesn't matter for us -- see element type section of
+            // gmsh doc for more: http://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format
             "{} 5 2 0 0 {} {} {} {} {} {} {} {}",
             index + 1,
-            grid_index(x_index, y_index, z_index),
-            x_index + 1,
-            y_index + 1,
-            y_index,
-            z_index,
-            z_index + 1,
-            z_index + xs.len() + 1,
-            z_index + xs.len(),
+            xl,  // 0
+            xr,  // 1
+            yr,  // 2
+            yl,  // 3
+            zl,  // 4
+            zr,  // 5
+            yzr, // 6
+            yzl, // 7
         )
         .unwrap();
+
     }
     writeln!(&mut filestream, "$EndElements").unwrap();
 
