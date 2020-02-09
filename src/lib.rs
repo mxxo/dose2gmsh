@@ -22,6 +22,50 @@ pub struct Cli {
 }
 
 /// Dose and uncertainty data for a 3D rectilinear hexahedral mesh.
+///
+/// ## Units
+/// * Coordinate values are centimetres following `EGSnrc` convention.
+/// * Dose values are gray-centimetres squared (dose area product).
+/// * Uncertainty values are fractions of their corresponding dose value.
+/// * Number of voxels can vary in each direction.
+/// * Number of nodes in each direction is `num_voxels + 1`.
+///
+/// ```no_run
+/// //             ------------
+/// //             |\         |\
+/// //  y          |  \       |  \
+/// //  ^          |   ------------
+/// //  |          |   |      |   |
+/// //  +---> x    ----+-------   |
+/// //   \          \  |       \  |
+/// //    z           \|         \|
+/// //                 ------------
+///
+/// // this example uses a 40 x 40 x 40 dose block
+/// # use dose2gmsh::DoseBlock;
+/// # use std::path::PathBuf;
+/// # fn main() -> Result<(), std::io::Error> {
+/// # let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+/// # path.push("props");
+/// # path.push("water_block.3ddose");
+/// // parse a 3ddose file, exiting on any parse errors
+/// let data = DoseBlock::from_3d_dose(&path)?;
+///
+/// // expecting 40 voxels in each direction
+/// assert!(data.num_x() == 40 &&
+///         data.num_y() == 40 &&
+///         data.num_z() == 40);
+///
+/// // expecting 64000 (40³) dose values and a matching uncertainty vector
+/// assert!(data.doses.len() == 64000);
+/// assert!(data.doses.len() == data.num_voxels());
+/// assert!(data.doses.len() == data.uncerts.len());
+///
+/// let output = PathBuf::from("output.msh");
+/// data.write_gmsh(&output)?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone)]
 pub struct DoseBlock {
     /// Node coordinates along *x* in `[cm]`.
@@ -254,3 +298,29 @@ where
     assert!(entries.len() == expect_len);
     entries
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn read_3ddose() {
+        let mut path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        path.push("props");
+        path.push("water_block.3ddose");
+
+        let data = DoseBlock::from_3d_dose(&path).expect("couldn't parse 3ddose file");
+
+        assert_eq!(data.num_voxels(), 40 * 40 * 40);
+        assert_eq!(data.num_nodes(), 41 * 41 * 41);
+        // x-nodes come first, then y, then z
+        assert_eq!(data.grid_index(0, 0, 0), 0);
+        assert_eq!(data.grid_index(0, 1, 0), 41);
+        assert_eq!(data.grid_index(0, 0, 1), 1681);
+        assert_eq!(data.grid_index(0, 0, 1), 1681);
+        // a random uncertainty to check
+        assert_eq!(data.uncerts[21503], 0.37652693977336593);
+    }
+}
+
