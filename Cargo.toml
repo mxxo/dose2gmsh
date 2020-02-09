@@ -5,7 +5,6 @@ authors = ["Max Orok <morok@mevex.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Convert EGSnrc 3ddose files to Gmsh mesh files"
-homepage = "https://github.com/mxxo/dose2gmsh"
 repository = "https://github.com/mxxo/dose2gmsh"
 keywords = ["EGSnrc", "Gmsh", "cli", "medical", "physics"]
 categories = ["command-line-utilities", "science", "visualization"]

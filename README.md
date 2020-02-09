@@ -1,6 +1,8 @@
 # dose2gmsh
 Convert `EGSnrc 3ddose` files for visualization in Gmsh. 
 
+Check out the [API documentation](https://docs.rs/dose2gmsh/latest).
+
 # Usage
 ```shell
 # convert water_block.3ddose to msh
