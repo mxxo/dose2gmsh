@@ -8,32 +8,36 @@ Check out the [API documentation](https://docs.rs/dose2gmsh/latest).
 
 # Usage
 ```shell
-# convert water_block.3ddose to msh
-$ dose2gmsh --input-file=water_block.3ddose
+# convert input.3ddose to msh
+$ dose2gmsh input.3ddose
+
+# convert input.3ddose to csv
+$ dose2gmsh input.3ddose --format=csv
 
 # specify the output file name
-$ dose2gmsh --input-file=water_block.3ddose  --output-file=output.msh
+$ dose2gmsh input.3ddose  --output-file=doses
 
 $ dose2gmsh --help 
 
-dose2gmsh 0.1.0
+dose2gmsh 1.0.0
 Max Orok <maxwellorok@gmail.com>
 Convert dosxyznrc 3ddose files to Gmsh msh files
 
 USAGE:
-    dose2gmsh.exe [OPTIONS] --input-file <input-file>
+    dose2gmsh [OPTIONS] <input-file>
 
 FLAGS:
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 OPTIONS:
-    -i, --input-file <input-file>      The input 3ddose file
-    -o, --output-file <output-file>    The output file name, defaults to <input_file>.msh
+    -f, --format <format>              The output format (msh2 or csv) [default: msh2]
+    -o, --output-file <output-file>    The output file name, defaults to <input_file>
 ```
 
 ## Supported formats 
 * Gmsh mesh version 2 `[.msh]` 
+* csv `[.csv]`
 
 ## Installation
 
