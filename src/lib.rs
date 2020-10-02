@@ -344,5 +344,47 @@ mod tests {
         // a random uncertainty to check
         assert_eq!(data.uncerts[21503], 0.37652693977336593);
     }
-}
 
+    #[test]
+    fn write_csv() {
+        let data = DoseBlock {
+            xs: vec![0.0, 2.0],
+            ys: vec![0.0, 2.0, 4.0],
+            zs: vec![0.0, 2.0, 4.0, 8.0],
+            doses: vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
+            uncerts: vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+        };
+
+        let file = "tmp.csv";
+        data.write_csv(file).unwrap();
+        let mut rdr = csv::Reader::from_path(file).unwrap();
+        assert_eq!(
+            rdr.headers().unwrap(),
+            vec!["xc [cm]", "yc [cm]", "zc [cm]", "Dose [Gy cm2]", "Uncertainty fraction"]
+        );
+
+        let mut records = rdr.records();
+        let record = records.next().unwrap().unwrap();
+        approx::relative_eq!(record[0].parse::<f64>().unwrap(), 1.0);
+        approx::relative_eq!(record[1].parse::<f64>().unwrap(), 1.0);
+        approx::relative_eq!(record[2].parse::<f64>().unwrap(), 1.0);
+        approx::relative_eq!(record[3].parse::<f64>().unwrap(), 10.0);
+        approx::relative_eq!(record[4].parse::<f64>().unwrap(), 0.1);
+
+        let record = records.next().unwrap().unwrap();
+        approx::relative_eq!(record[0].parse::<f64>().unwrap(), 1.0);
+        approx::relative_eq!(record[1].parse::<f64>().unwrap(), 3.0);
+        approx::relative_eq!(record[2].parse::<f64>().unwrap(), 1.0);
+        approx::relative_eq!(record[3].parse::<f64>().unwrap(), 20.0);
+        approx::relative_eq!(record[4].parse::<f64>().unwrap(), 0.2);
+
+        let record = records.next().unwrap().unwrap();
+        approx::relative_eq!(record[0].parse::<f64>().unwrap(), 1.0);
+        approx::relative_eq!(record[1].parse::<f64>().unwrap(), 1.0);
+        approx::relative_eq!(record[2].parse::<f64>().unwrap(), 3.0);
+        approx::relative_eq!(record[3].parse::<f64>().unwrap(), 30.0);
+        approx::relative_eq!(record[4].parse::<f64>().unwrap(), 0.3);
+
+        std::fs::remove_file(file).unwrap();
+    }
+}
