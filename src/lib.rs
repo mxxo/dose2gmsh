@@ -24,6 +24,7 @@ pub struct Cli {
     pub format: Fmt
 }
 
+/// Converter output format
 #[derive(Debug, Copy, Clone)]
 pub enum Fmt {
     Csv,
@@ -298,6 +299,7 @@ impl DoseBlock {
         write_elt_data(r#""Uncertainty fraction""#, &self.uncerts)
     }
 
+    /// Convert the `3ddose` data to `csv`.
     pub fn write_csv<P: AsRef<std::path::Path>>(&self, output: P) -> Result<(), std::io::Error> {
         let calc_centroids = |pts: &Vec<f64>| -> Vec<f64> {
             let num_centroids = pts.len() - 1;

@@ -55,6 +55,6 @@ You can update your installation with `cargo install --force`.
 
 `dose2gmsh` parses `3ddose` files into a intermediate `DoseBlock` structure. After parsing, it writes the `DoseBlock` data to an output file. 
 
-You can add an output format by implementing a new `DoseBlock::write*` method. Use `DoseBlock::write_gmsh` as a starting point. 
+You can add an output format by implementing a new `DoseBlock::write*` method. Use `DoseBlock::write_msh2` as a starting point.
 
 If you'd like help implementing a new output format, open an issue.  
