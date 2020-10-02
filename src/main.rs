@@ -1,18 +1,23 @@
-use dose2gmsh::{Cli, DoseBlock};
+use dose2gmsh::{Cli, DoseBlock, Fmt};
 use structopt::StructOpt;
 
 fn main() -> Result<(), std::io::Error> {
     let args = Cli::from_args();
-
     let data = DoseBlock::from_3d_dose(&args.input_file)?;
 
-    let output = if let Some(output_file) = args.output_file {
-        output_file
-    } else {
-        let mut output_file = args.input_file.clone();
-        output_file.set_extension("msh");
-        output_file
+    let mut output_name = match args.output_file {
+        Some(name) => name,
+        None => args.input_file.clone(),
     };
 
-    data.write_gmsh(&output)
+    match args.format {
+        Fmt::Csv => {
+            output_name.set_extension("csv");
+            data.write_csv(&output_name)
+        },
+        Fmt::Msh2 => {
+            output_name.set_extension("msh");
+            data.write_msh2(&output_name)
+        }
+    }
 }

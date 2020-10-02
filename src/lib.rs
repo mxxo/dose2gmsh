@@ -14,11 +14,31 @@ use structopt::StructOpt;
 #[structopt(name = "dose2gmsh", author = "Max Orok <maxwellorok@gmail.com>", about = "Convert dosxyznrc 3ddose files to Gmsh msh files")]
 pub struct Cli {
     /// The input 3ddose file
-    #[structopt(parse(from_os_str), short, long)]
+    #[structopt(parse(from_os_str))]
     pub input_file: std::path::PathBuf,
-    /// The output file name, defaults to <input_file>.msh
+    /// The output file name, defaults to <input_file>
     #[structopt(parse(from_os_str), short, long)]
     pub output_file: Option<std::path::PathBuf>,
+    /// The output format (msh2 or csv)
+    #[structopt(short, long, default_value = "msh2")]
+    pub format: Fmt
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Fmt {
+    Csv,
+    Msh2,
+}
+
+impl std::str::FromStr for Fmt {
+    type Err = String;
+    fn from_str(fmt: &str) -> Result<Self, Self::Err> {
+        match fmt {
+            "csv" => Ok(Fmt::Csv),
+            "msh2" => Ok(Fmt::Msh2),
+            _ => Err("Could not parse the format".to_string()),
+        }
+    }
 }
 
 /// Dose and uncertainty data for a 3D rectilinear hexahedral mesh.
@@ -61,7 +81,7 @@ pub struct Cli {
 /// assert!(data.doses.len() == data.num_voxels());
 /// assert!(data.doses.len() == data.uncerts.len());
 ///
-/// data.write_gmsh("output.msh")?;
+/// data.write_msh2("output.msh")?;
 /// # Ok(())
 /// # }
 /// ```
@@ -166,7 +186,7 @@ impl DoseBlock {
     }
 
     /// Convert the `3ddose` data to a Gmsh `.msh` file (version 2.2).
-    pub fn write_gmsh<P: AsRef<std::path::Path>>(&self, output: P) -> Result<(), std::io::Error> {
+    pub fn write_msh2<P: AsRef<std::path::Path>>(&self, output: P) -> Result<(), std::io::Error> {
         use itertools::Itertools;
 
         let mut filestream = BufWriter::new(File::create(output)?);
