@@ -1,4 +1,7 @@
 # dose2gmsh
+[![Crates](https://img.shields.io/crates/v/dose2gmsh.svg)](https://crates.io/crates/dose2gmsh)
+[![Docs](https://docs.rs/dose2gmsh/badge.svg)](https://docs.rs/dose2gmsh/)
+
 Convert `EGSnrc 3ddose` files for visualization in Gmsh. 
 
 Check out the [API documentation](https://docs.rs/dose2gmsh/latest).
@@ -14,7 +17,7 @@ $ dose2gmsh --input-file=water_block.3ddose  --output-file=output.msh
 $ dose2gmsh --help 
 
 dose2gmsh 0.1.0
-Max Orok <morok@mevex.com>
+Max Orok <maxwellorok@gmail.com>
 Convert dosxyznrc 3ddose files to Gmsh msh files
 
 USAGE:

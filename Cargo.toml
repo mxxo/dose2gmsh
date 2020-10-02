@@ -8,6 +8,7 @@ description = "Convert EGSnrc 3ddose files to Gmsh mesh files"
 repository = "https://github.com/mxxo/dose2gmsh"
 keywords = ["EGSnrc", "Gmsh", "cli", "medical", "physics"]
 categories = ["command-line-utilities", "science", "visualization"]
+exclude = ["props/"]
 
 [dependencies]
 structopt = "0.3.8"

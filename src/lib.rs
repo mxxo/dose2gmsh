@@ -11,7 +11,7 @@ use structopt::StructOpt;
 
 /// Command line input parameters.
 #[derive(StructOpt, Debug)]
-#[structopt(name = "dose2gmsh", author = "Max Orok <morok@mevex.com>", about = "Convert dosxyznrc 3ddose files to Gmsh msh files")]
+#[structopt(name = "dose2gmsh", author = "Max Orok <maxwellorok@gmail.com>", about = "Convert dosxyznrc 3ddose files to Gmsh msh files")]
 pub struct Cli {
     /// The input 3ddose file
     #[structopt(parse(from_os_str), short, long)]
