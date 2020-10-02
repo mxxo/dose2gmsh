@@ -277,6 +277,34 @@ impl DoseBlock {
         write_elt_data(r#""Dose [Gy·cm2]""#, &self.doses)?;
         write_elt_data(r#""Uncertainty fraction""#, &self.uncerts)
     }
+
+    pub fn write_csv<P: AsRef<std::path::Path>>(&self, output: P) -> Result<(), std::io::Error> {
+        let calc_centroids = |pts: &Vec<f64>| -> Vec<f64> {
+            let num_centroids = pts.len() - 1;
+            let mut cs = Vec::with_capacity(num_centroids);
+            for i in 0..num_centroids {
+                cs.push((pts[i] + pts[i+1]) / 2.0);
+            }
+            cs
+        };
+
+        let voxel_idx = |i: usize, j: usize, k: usize| -> usize {
+            i + self.num_x() * j + self.num_x() * self.num_y() * k
+        };
+
+        let mut file = BufWriter::new(File::create(output)?);
+        writeln!(&mut file, "xc [cm],yc [cm],zc [cm],Dose [Gy cm2],Uncertainty fraction")?;
+        for (k, z) in calc_centroids(&self.zs).into_iter().enumerate() {
+            for (j, y) in calc_centroids(&self.ys).into_iter().enumerate() {
+                for (i, x) in calc_centroids(&self.xs).into_iter().enumerate() {
+                    writeln!(&mut file, "{},{},{},{},{}", x, y, z,
+                             self.doses[voxel_idx(i, j, k)],
+                             self.uncerts[voxel_idx(i, j, k)])?;
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 fn parse_simple_line<T>(line: String, title: &'static str, expect_len: usize) -> Vec<T>
