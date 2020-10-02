@@ -61,8 +61,7 @@ pub struct Cli {
 /// assert!(data.doses.len() == data.num_voxels());
 /// assert!(data.doses.len() == data.uncerts.len());
 ///
-/// let output = PathBuf::from("output.msh");
-/// data.write_gmsh(&output)?;
+/// data.write_gmsh("output.msh")?;
 /// # Ok(())
 /// # }
 /// ```
@@ -80,14 +79,9 @@ pub struct DoseBlock {
     pub uncerts: Vec<f64>,
 }
 
-// add more output formats here
-// enum OutputFormat {
-//     Gmsh2,
-// }
-
 impl DoseBlock {
     /// Create a new `DoseBlock` by parsing a `3ddose` data file.
-    pub fn from_3d_dose(input_file: &std::path::PathBuf) -> Result<DoseBlock, std::io::Error> {
+    pub fn from_3d_dose<P: AsRef<std::path::Path>>(input_file: P) -> Result<DoseBlock, std::io::Error> {
         let dose_input = BufReader::new(File::open(input_file)?);
 
         let mut lines = dose_input.lines().map(|l| l.unwrap());
@@ -172,7 +166,7 @@ impl DoseBlock {
     }
 
     /// Convert the `3ddose` data to a Gmsh `.msh` file (version 2.2).
-    pub fn write_gmsh(&self, output: &std::path::PathBuf) -> Result<(), std::io::Error> {
+    pub fn write_gmsh<P: AsRef<std::path::Path>>(&self, output: P) -> Result<(), std::io::Error> {
         use itertools::Itertools;
 
         let mut filestream = BufWriter::new(File::create(output)?);
