@@ -19,7 +19,7 @@ $ dose2gmsh input.3ddose  --output-file=doses
 
 $ dose2gmsh --help 
 
-dose2gmsh 1.0.0
+dose2gmsh 1.0.1
 Max Orok <maxwellorok@gmail.com>
 Convert dosxyznrc 3ddose files to Gmsh msh files
 
