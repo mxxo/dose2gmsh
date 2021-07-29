@@ -3,6 +3,10 @@ use structopt::StructOpt;
 
 fn main() -> Result<(), std::io::Error> {
     let args = Cli::from_args();
+    match args.input_file.extension() {
+        Some(ext) if ext == "3ddose" => {},
+        _ => eprintln!("warning: input file does not have 3ddose extension"),
+    }
     let data = DoseBlock::from_3d_dose(&args.input_file)?;
 
     let mut output_name = match args.output_file {
