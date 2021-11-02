@@ -11,6 +11,9 @@ Check out the [API documentation](https://docs.rs/dose2gmsh/latest).
 # convert input.3ddose to msh
 $ dose2gmsh input.3ddose
 
+# convert input.3ddose to ascii vtk
+$ dose2gmsh input.3ddose --format=vtk
+
 # convert input.3ddose to csv
 $ dose2gmsh input.3ddose --format=csv
 
@@ -38,6 +41,7 @@ OPTIONS:
 ## Supported formats 
 * Gmsh mesh version 2 `[.msh]` 
 * csv `[.csv]`
+* ASCII VTK `[.vtk]`
 
 ## Installation
 

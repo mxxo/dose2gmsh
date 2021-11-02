@@ -19,7 +19,7 @@ pub struct Cli {
     /// The output file name, defaults to <input_file>
     #[structopt(parse(from_os_str), short, long)]
     pub output_file: Option<std::path::PathBuf>,
-    /// The output format (msh2 or csv)
+    /// The output format (msh2, vtk or csv)
     #[structopt(short, long, default_value = "msh2")]
     pub format: Fmt
 }
@@ -29,6 +29,7 @@ pub struct Cli {
 pub enum Fmt {
     Csv,
     Msh2,
+    Vtk,
 }
 
 impl std::str::FromStr for Fmt {
@@ -37,6 +38,7 @@ impl std::str::FromStr for Fmt {
         match fmt {
             "csv" => Ok(Fmt::Csv),
             "msh2" => Ok(Fmt::Msh2),
+            "vtk" => Ok(Fmt::Vtk),
             _ => Err("Could not parse the format".to_string()),
         }
     }
@@ -326,6 +328,90 @@ impl DoseBlock {
             }
         }
         Ok(())
+    }
+    /// Convert the `3ddose` data to legacy ASCII VTK.
+    pub fn write_vtk<P: AsRef<std::path::Path>>(&self, output: P) -> Result<(), std::io::Error> {
+        use itertools::Itertools;
+
+        let mut filestream = BufWriter::new(File::create(output)?);
+
+        // header
+        writeln!(&mut filestream, "# vtk DataFile Version 4.1")?;
+        writeln!(&mut filestream, "EGSnrc `3ddose data, written by dose2gmsh")?;
+        writeln!(&mut filestream, "ASCII")?;
+        writeln!(&mut filestream, "DATASET UNSTRUCTURED_GRID")?;
+        // nodes
+        writeln!(&mut filestream, "POINTS {} double", self.num_nodes())?;
+        for z in self.zs.iter() {
+            for y in self.ys.iter() {
+                for x in self.xs.iter() {
+                    writeln!(&mut filestream, "{} {} {}", x, y, z)?;
+                }
+            }
+        }
+        writeln!(&mut filestream, "\nCELLS {} {}", self.num_voxels(), 9 * self.num_voxels())?;
+
+        let mut x_nodes = 0..self.num_nodes();
+        let gmsh_y_index = |x_index| x_index + self.xs.len();
+        let gmsh_z_index = |x_index| x_index + self.xs.len() * self.ys.len();
+
+        for index in 0..self.num_voxels() {
+            // skip rightmost node to start a new row
+            if index != 0 && index % self.num_x() == 0 {
+                x_nodes = x_nodes.dropping(1);
+            }
+
+            // skip top row of nodes to move to the next x-y block
+            if index != 0 && index % (self.num_x() * self.num_y()) == 0 {
+                x_nodes = x_nodes.dropping(self.xs.len());
+            }
+
+            // same as gmsh node ordering
+            let xl = x_nodes.next().unwrap(); // 0 node
+            let xr = xl + 1; // 1
+
+            let yl = gmsh_y_index(xl); // 3
+            let yr = yl + 1; // 2
+
+            let zl = gmsh_z_index(xl); // 4
+            let zr = zl + 1; // 5
+
+            let yzl = gmsh_z_index(yl); // 7
+            let yzr = yzl + 1; // 6
+
+            writeln!(
+                &mut filestream,
+                "8 {} {} {} {} {} {} {} {}",
+                xl,  // 0
+                xr,  // 1
+                yr,  // 2
+                yl,  // 3
+                zl,  // 4
+                zr,  // 5
+                yzr, // 6
+                yzl, // 7
+            )?;
+        }
+
+        writeln!(&mut filestream, "\nCELL_TYPES {}", self.num_voxels())?;
+        for _ in 0..self.num_voxels() {
+            // 12 is vtk code for hexahedron
+            writeln!(&mut filestream, "12")?;
+        }
+
+        writeln!(&mut filestream, "\nCELL_DATA {}", self.num_voxels())?;
+        writeln!(&mut filestream, "FIELD FieldData 2")?;
+        let mut write_vtk_field_data = |name: &str, data: &Vec<f64>| -> Result<(), std::io::Error> {
+            writeln!(&mut filestream, "{} 1 {} double", name, self.num_voxels())?;
+            for val in data.iter() {
+                writeln!(&mut filestream, "{}", val)?;
+            }
+            Ok(())
+        };
+        // %20 = url-encoded space character for properly formatted VTK legend
+        write_vtk_field_data("dose%20[Gy%20cm2]", &self.doses)?;
+        // %25 = url-encoded % symbol
+        write_vtk_field_data("uncertainty%20[%25]", &self.uncerts)
     }
 }
 

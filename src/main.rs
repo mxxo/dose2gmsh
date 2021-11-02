@@ -23,5 +23,9 @@ fn main() -> Result<(), std::io::Error> {
             output_name.set_extension("msh");
             data.write_msh2(&output_name)
         }
+        Fmt::Vtk => {
+            output_name.set_extension("vtk");
+            data.write_vtk(&output_name)
+        }
     }
 }
